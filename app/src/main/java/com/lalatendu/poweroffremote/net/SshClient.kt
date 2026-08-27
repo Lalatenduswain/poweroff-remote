@@ -1,6 +1,5 @@
 package com.lalatendu.poweroffremote.net
 
-import android.util.Base64
 import com.jcraft.jsch.ChannelExec
 import com.jcraft.jsch.HostKey
 import com.jcraft.jsch.HostKeyRepository
@@ -256,9 +255,16 @@ object SshClient {
         }
     }
 
-    /** OpenSSH-style "SHA256:<base64 without padding>". */
+    /**
+     * OpenSSH-style "SHA256:<base64 without padding>" — the same string `ssh-keygen -lf` prints,
+     * so a fingerprint shown in the app can be compared against the server by eye.
+     *
+     * Uses java.util.Base64 rather than android.util.Base64: it is available from API 26 (our
+     * minSdk) and keeps this whole file runnable on a plain JVM, which is what lets the SSH
+     * behaviour be covered by tests against a real sshd.
+     */
     fun fingerprintOf(key: ByteArray): String {
         val digest = MessageDigest.getInstance("SHA-256").digest(key)
-        return "SHA256:" + Base64.encodeToString(digest, Base64.NO_WRAP or Base64.NO_PADDING)
+        return "SHA256:" + java.util.Base64.getEncoder().withoutPadding().encodeToString(digest)
     }
 }

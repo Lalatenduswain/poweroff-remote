@@ -75,6 +75,25 @@ Make it stick across reboots with a systemd unit or a NetworkManager
 ./gradlew :app:assembleRelease      # minified, needs signing before install
 ```
 
+### Integration tests against a real sshd
+
+`SshIntegrationTest` drives the actual SSH client — auth, exit status, stdin delivery, host-key
+pinning and the "no exit status means the box went down" rule — against a live server. It is
+skipped unless you point it at one, so a plain test run stays offline:
+
+```bash
+FP=$(ssh-keyscan localhost 2>/dev/null | ssh-keygen -lf - | awk '{print $2}' | paste -sd,)
+./gradlew :app:testDebugUnitTest \
+  -Ppoweroff.itHost=127.0.0.1 \
+  -Ppoweroff.itUser="$USER" \
+  -Ppoweroff.itKey="$HOME/.ssh/id_rsa" \
+  -Ppoweroff.itFingerprint="$FP"
+```
+
+Nothing in the suite shuts the target down. The power-off path is covered by running a command
+that dies by signal, which is what sshd reports when a machine disappears mid-command. Point it
+at `127.0.0.1` and it needs no remote host at all.
+
 Requires JDK 17+, Android SDK with API 36. `minSdk` is 26 (Android 8.0).
 
 Install on a connected device:

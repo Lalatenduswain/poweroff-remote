@@ -61,6 +61,19 @@ android {
     }
 }
 
+// Opt-in integration tests: they need a reachable sshd and stay skipped unless the host is
+// supplied, e.g.
+//   ./gradlew :app:testDebugUnitTest -Ppoweroff.itHost=127.0.0.1 -Ppoweroff.itUser=me \
+//     -Ppoweroff.itKey=$HOME/.ssh/id_rsa
+tasks.withType<Test>().configureEach {
+    listOf("itHost", "itPort", "itUser", "itKey", "itPassword", "itFingerprint").forEach { name ->
+        (project.findProperty("poweroff.$name") as String?)?.let {
+            systemProperty("poweroff.$name", it)
+        }
+    }
+    testLogging { showStandardStreams = true }
+}
+
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
