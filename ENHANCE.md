@@ -313,14 +313,15 @@ true rather than approximately true.
 
 ### Immediate (This Week)
 - [ ] Run the instrumented suite on Phone 1 once the Village box is back — 31 tests are written and never executed
-- [ ] Add GitHub Actions CI (unit tests + lint + assembleDebug)
-- [ ] Surface `securityLevel()` in Settings
-- [ ] Refresh status on list open
-- [ ] Add release signing config
+- [ ] Raise the GitHub Actions budget, or the CI workflow cannot start (see note below)
+- [x] Add GitHub Actions CI (unit tests + lint + assembleDebug)  *(done 2026-08-27)*
+- [x] Surface `securityLevel()` in Settings  *(done 2026-08-27)*
+- [x] Refresh status on list open  *(done 2026-08-27)*
+- [x] Add release signing config  *(done 2026-08-27)*
 
 ### Short-term (This Month)
-- [ ] Biometric grace period, configurable in Settings
-- [ ] Wake-then-verify polling with a clear timeout message
+- [x] Biometric grace period, configurable in Settings  *(done 2026-08-27)*
+- [x] Wake-then-verify polling with a clear timeout message  *(done 2026-08-27)*
 - [ ] "Trust this host?" fingerprint prompt on first connect
 - [ ] Move power actions to WorkManager expedited work
 - [ ] Split `ServerEditorScreen` into per-section composables
@@ -371,5 +372,11 @@ true rather than approximately true.
    action which can silently vanish is worse than no widget.
 
 ---
+
+> **Note on CI (2026-08-27):** the workflow is committed and its runner logic was verified in a
+> clean `ubuntu:24.04` container, but the first run was refused by GitHub with *"The job was not
+> started because an Actions budget is preventing further use."* Private repositories consume
+> Actions minutes; either raise the spending limit in GitHub billing settings or make the repo
+> public, which gets unlimited free Actions.
 
 *Analysis based on the current codebase, its git history, and 2026 Android platform and category research.*
