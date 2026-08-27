@@ -11,7 +11,19 @@ data class AppSettings(
     val confirmPowerOff: Boolean = true,
     val typeNameToConfirm: Boolean = false,
     val dynamicColor: Boolean = true,
-)
+    /** Seconds the app may spend in the background before it locks again. 0 = lock immediately. */
+    val lockGraceSeconds: Int = 30,
+) {
+    companion object {
+        val LOCK_GRACE_CHOICES = listOf(0, 30, 60, 300)
+
+        fun graceLabel(seconds: Int): String = when (seconds) {
+            0 -> "Immediately"
+            in 1..59 -> "${seconds}s"
+            else -> "${seconds / 60} min"
+        }
+    }
+}
 
 /** Non-secret preferences. Nothing here is worth encrypting. */
 class SettingsRepository(context: Context) {
@@ -25,6 +37,7 @@ class SettingsRepository(context: Context) {
             confirmPowerOff = prefs.getBoolean(KEY_CONFIRM, true),
             typeNameToConfirm = prefs.getBoolean(KEY_TYPE_NAME, false),
             dynamicColor = prefs.getBoolean(KEY_DYNAMIC, true),
+            lockGraceSeconds = prefs.getInt(KEY_LOCK_GRACE, 30),
         )
     )
     val settings: StateFlow<AppSettings> = _settings.asStateFlow()
@@ -38,6 +51,7 @@ class SettingsRepository(context: Context) {
             .putBoolean(KEY_CONFIRM, next.confirmPowerOff)
             .putBoolean(KEY_TYPE_NAME, next.typeNameToConfirm)
             .putBoolean(KEY_DYNAMIC, next.dynamicColor)
+            .putInt(KEY_LOCK_GRACE, next.lockGraceSeconds)
             .apply()
     }
 
@@ -47,5 +61,6 @@ class SettingsRepository(context: Context) {
         const val KEY_CONFIRM = "confirm_power_off"
         const val KEY_TYPE_NAME = "type_name_to_confirm"
         const val KEY_DYNAMIC = "dynamic_color"
+        const val KEY_LOCK_GRACE = "lock_grace_seconds"
     }
 }

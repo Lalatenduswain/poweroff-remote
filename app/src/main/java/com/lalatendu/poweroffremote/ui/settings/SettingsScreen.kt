@@ -22,9 +22,11 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.FilterChip
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -32,10 +34,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.lalatendu.poweroffremote.BuildConfig
+import com.lalatendu.poweroffremote.data.crypto.CryptoManager
 import com.lalatendu.poweroffremote.data.store.AppSettings
 import com.lalatendu.poweroffremote.ui.components.ConfirmDialog
 import com.lalatendu.poweroffremote.ui.components.SectionCard
 import com.lalatendu.poweroffremote.ui.lock.AppLock
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -50,6 +55,9 @@ fun SettingsScreen(
 ) {
     val context = LocalContext.current
     val lockAvailable = remember { AppLock.isAvailable(context) }
+    val keyProtection by produceState(initialValue = "checking...") {
+        value = withContext(Dispatchers.IO) { CryptoManager.default.securityLevel() }
+    }
     var erasing by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -84,6 +92,28 @@ fun SettingsScreen(
                     enabled = lockAvailable,
                     onChange = { value -> onChange { it.copy(requireUnlock = value) } },
                 )
+                if (lockAvailable && settings.requireUnlock) {
+                    Column {
+                        Text("Lock again after", style = MaterialTheme.typography.bodyLarge)
+                        Text(
+                            text = "How long the app may sit in the background before it asks again.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Row(
+                            modifier = Modifier.padding(top = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            AppSettings.LOCK_GRACE_CHOICES.forEach { seconds ->
+                                FilterChip(
+                                    selected = settings.lockGraceSeconds == seconds,
+                                    onClick = { onChange { it.copy(lockGraceSeconds = seconds) } },
+                                    label = { Text(AppSettings.graceLabel(seconds)) },
+                                )
+                            }
+                        }
+                    }
+                }
                 SettingRow(
                     label = "Block screenshots",
                     description = "Hides the app in the recents list and blocks screen capture.",
@@ -125,6 +155,12 @@ fun SettingsScreen(
                         "encrypted with a key held in the Android Keystore.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = "Encryption key protected by: $keyProtection",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (keyProtection == "software") MaterialTheme.colorScheme.error
+                    else MaterialTheme.colorScheme.primary,
                 )
                 OutlinedButton(
                     onClick = onClearLogs,

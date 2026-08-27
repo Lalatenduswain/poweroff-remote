@@ -9,6 +9,7 @@ import com.lalatendu.poweroffremote.net.Reachability
 import com.lalatendu.poweroffremote.net.SshClient
 import com.lalatendu.poweroffremote.net.SshOutcome
 import com.lalatendu.poweroffremote.net.WolSender
+import kotlinx.coroutines.delay
 
 data class ActionResult(
     val success: Boolean,
@@ -138,6 +139,41 @@ class PowerController(
             hostKeyChanged = outcome.hostKeyChanged,
             presentedFingerprint = outcome.hostKeyFingerprint.orEmpty(),
         )
+    }
+
+    /**
+     * A magic packet is fire-and-forget, so the only way to know it worked is to keep knocking.
+     * Polls the SSH port until the machine answers, and records one log entry for the outcome
+     * rather than one per probe.
+     */
+    suspend fun awaitWake(
+        server: Server,
+        timeoutMs: Long = 90_000,
+        intervalMs: Long = 5_000,
+    ): ActionResult {
+        val started = System.currentTimeMillis()
+        while (System.currentTimeMillis() - started < timeoutMs) {
+            delay(intervalMs)
+            if (Reachability.check(server, timeoutMs = 3000).up) {
+                val seconds = (System.currentTimeMillis() - started) / 1000
+                val result = ActionResult(
+                    success = true,
+                    summary = "${server.name} is up",
+                    detail = "Answered on port ${server.port} ${seconds}s after the magic packet.",
+                )
+                log(server, ActionType.WAKE, result)
+                return result
+            }
+        }
+        val result = ActionResult(
+            success = false,
+            summary = "${server.name} did not come up",
+            detail = "No answer on port ${server.port} within ${timeoutMs / 1000}s. Check that " +
+                "Wake-on-LAN is enabled in the BIOS and that `ethtool <iface>` reports Wake-on: g, " +
+                "and confirm the MAC address.",
+        )
+        log(server, ActionType.WAKE, result)
+        return result
     }
 
     private suspend fun runPowerCommand(

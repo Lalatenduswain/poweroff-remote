@@ -1,9 +1,26 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
 }
+
+// Release signing credentials come from local.properties (gitignored) or the environment, so the
+// keystore is never checked in. When they are absent the release build simply stays unsigned
+// instead of failing, which keeps `assembleRelease` working on a fresh clone and in CI.
+val localProperties = Properties().apply {
+    val file = rootProject.file("local.properties")
+    if (file.exists()) file.inputStream().use { load(it) }
+}
+
+fun signingSecret(key: String): String? =
+    (localProperties.getProperty(key) ?: System.getenv(key))?.takeIf { it.isNotBlank() }
+
+val releaseKeystore = signingSecret("RELEASE_STORE_FILE")
+    ?.let { rootProject.file(it) }
+    ?.takeIf { it.exists() }
 
 android {
     namespace = "com.lalatendu.poweroffremote"
@@ -18,8 +35,20 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        if (releaseKeystore != null) {
+            create("release") {
+                storeFile = releaseKeystore
+                storePassword = signingSecret("RELEASE_STORE_PASSWORD")
+                keyAlias = signingSecret("RELEASE_KEY_ALIAS")
+                keyPassword = signingSecret("RELEASE_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
+            signingConfig = signingConfigs.findByName("release")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(

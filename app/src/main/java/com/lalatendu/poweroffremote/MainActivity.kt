@@ -1,6 +1,7 @@
 package com.lalatendu.poweroffremote
 
 import android.os.Bundle
+import android.os.SystemClock
 import android.view.WindowManager
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -67,11 +68,28 @@ private fun AppRoot(activity: FragmentActivity) {
         var unlocked by remember { mutableStateOf(!lockNeeded) }
         var lockMessage by remember { mutableStateOf<String?>(null) }
 
-        // Re-lock whenever the app leaves the foreground.
+        // Re-lock after the app has been away long enough. A short grace period means glancing at
+        // another app to copy a MAC address does not cost a second fingerprint; it also absorbs
+        // devices that report ON_STOP while the system biometric sheet is up.
+        var leftForegroundAt by remember { mutableStateOf(0L) }
         val lifecycleOwner = LocalLifecycleOwner.current
-        DisposableEffect(lifecycleOwner, lockNeeded) {
+        DisposableEffect(lifecycleOwner, lockNeeded, settings.lockGraceSeconds) {
             val observer = LifecycleEventObserver { _, event ->
-                if (event == Lifecycle.Event.ON_STOP && lockNeeded) unlocked = false
+                when (event) {
+                    Lifecycle.Event.ON_STOP ->
+                        if (lockNeeded) leftForegroundAt = SystemClock.elapsedRealtime()
+
+                    Lifecycle.Event.ON_START -> {
+                        val since = leftForegroundAt
+                        if (lockNeeded && since != 0L) {
+                            val away = SystemClock.elapsedRealtime() - since
+                            if (away >= settings.lockGraceSeconds * 1000L) unlocked = false
+                            leftForegroundAt = 0L
+                        }
+                    }
+
+                    else -> Unit
+                }
             }
             lifecycleOwner.lifecycle.addObserver(observer)
             onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
@@ -118,6 +136,7 @@ private fun AppNavigation() {
     NavHost(navController = navController, startDestination = Routes.SERVERS) {
 
         composable(Routes.SERVERS) {
+            LaunchedEffect(servers.size) { container.runner.refreshAll(servers) }
             ServerListScreen(
                 servers = servers,
                 statuses = statuses,

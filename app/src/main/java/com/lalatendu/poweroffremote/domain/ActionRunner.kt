@@ -2,6 +2,7 @@ package com.lalatendu.poweroffremote.domain
 
 import com.lalatendu.poweroffremote.data.model.Server
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,6 +24,8 @@ class ActionRunner(
     private val scope: CoroutineScope,
 ) {
 
+    private val wakeWatchers = mutableMapOf<String, Job>()
+
     private val _busy = MutableStateFlow<Set<String>>(emptySet())
     val busy: StateFlow<Set<String>> = _busy.asStateFlow()
 
@@ -43,7 +46,9 @@ class ActionRunner(
 
     fun reboot(server: Server) = run(server) { controller.reboot(it).also { markDownSoon(server.id) } }
 
-    fun wake(server: Server) = run(server) { controller.wake(it) }
+    fun wake(server: Server) = run(server) { sent ->
+        controller.wake(sent).also { if (it.success) watchForWake(sent) }
+    }
 
     fun test(server: Server) = run(server) { controller.test(it) }
 
@@ -59,6 +64,21 @@ class ActionRunner(
     }
 
     fun refreshAll(servers: List<Server>) = servers.forEach { refreshStatus(it) }
+
+    /**
+     * Runs after a magic packet goes out. Deliberately outside [run] so the server is not held
+     * "busy" for a minute and a half — the status dot carries the progress instead.
+     */
+    private fun watchForWake(server: Server) {
+        wakeWatchers.remove(server.id)?.cancel()
+        setStatus(server.id, ServerStatus.CHECKING)
+        wakeWatchers[server.id] = scope.launch {
+            val result = controller.awaitWake(server)
+            setStatus(server.id, if (result.success) ServerStatus.UP else ServerStatus.DOWN)
+            _lastResults.value = _lastResults.value + (server.id to result)
+            _messages.tryEmit(result.summary)
+        }
+    }
 
     fun clearResult(serverId: String) {
         _lastResults.value = _lastResults.value - serverId
@@ -82,6 +102,7 @@ class ActionRunner(
 
     /** A machine that was just told to power down is not "up" any more, whatever the last probe said. */
     private fun markDownSoon(serverId: String) {
+        wakeWatchers.remove(serverId)?.cancel()
         setStatus(serverId, ServerStatus.UNKNOWN)
     }
 
