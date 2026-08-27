@@ -132,7 +132,7 @@ configurable threshold (Immediately / 30s / 1 min / 5 min), defaulting to 30s.
 #### 5. Release signing config
 **Why:** `assembleRelease` produces an unsigned APK today — you cannot install the 2.2MB build.
 **How:** Keystore file plus `signingConfigs` reading the password from `local.properties` or env
-vars, exactly as the sibling `school-bus-real-time-tracker-Kotlin` project does.
+vars, so the keystore itself never has to be committed.
 **Impact:** A shippable artefact, and the on-device instrumented run stops needing the 20MB debug APK.
 
 ---
@@ -195,7 +195,7 @@ another; reuse it as `jumpHostId`.
   blocking 4s TCP connect on `Dispatchers.IO`. With a dozen servers this saturates the dispatcher.
   Bound it with a `Semaphore(6)`.
 - **Trim the debug APK.** 20MB debug vs 2.2MB release is almost entirely Compose tooling. Harmless,
-  but it makes every push to the Village box slow — build a signed release variant for on-device work.
+  but it makes every transfer to a test device slow — build a signed release variant for on-device work.
 - **Baseline profile is already generated** by `compileReleaseArtProfile`. Consider a custom profile
   driven by a Macrobenchmark run once the widget exists.
 
@@ -312,7 +312,7 @@ true rather than approximately true.
 ## Implementation Roadmap
 
 ### Immediate (This Week)
-- [ ] Run the instrumented suite on Phone 1 once the Village box is back — 31 tests are written and never executed
+- [ ] Run the instrumented suite on a physical device — 31 tests are written and have never executed
 - [ ] Raise the GitHub Actions budget, or the CI workflow cannot start (see note below)
 - [x] Add GitHub Actions CI (unit tests + lint + assembleDebug)  *(done 2026-08-27)*
 - [x] Surface `securityLevel()` in Settings  *(done 2026-08-27)*
