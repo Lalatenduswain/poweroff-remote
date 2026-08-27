@@ -11,19 +11,19 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '17'
 
-      - uses: android-actions/setup-android@v3
+      - uses: android-actions/setup-android@v4
 
       - name: Install the SDK pieces this project pins
         run: sdkmanager --install "platforms;android-36" "build-tools;36.0.0"
 
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v6
 
       # The SSH integration tests need a real sshd. Running one on the runner itself keeps them
       # honest without depending on a service container's shell being complete enough for
@@ -52,6 +52,11 @@ jobs:
             -Ppoweroff.itKey="$HOME/.ssh/ci_key" \
             -Ppoweroff.itFingerprint="$FP"
 
+      # A green build proves nothing if the integration tests skipped themselves.
+      - name: Summarise tests and refuse silent skips
+        if: always()
+        run: python3 scripts/test-summary.py --require-all
+
       - name: Lint
         run: ./gradlew :app:lintDebug
 
@@ -60,7 +65,7 @@ jobs:
 
       - name: Upload reports when something fails
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: build-reports
           path: |
