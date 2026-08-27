@@ -85,17 +85,19 @@ object SshClient {
                 Thread.sleep(60)
             }
 
+            // Read the channel state before disconnecting it, or every case looks "closed".
+            val closedCleanly = channel.isClosed
             val exit = channel.exitStatus
             val stdout = stdoutSink.toString("UTF-8")
             val stderr = stderrSink.toString("UTF-8")
             runCatching { channel.disconnect() }
 
-            val timedOut = !channel.isClosed && !droppedEarly
+            val timedOut = !closedCleanly && !droppedEarly
             val ok = when {
                 exit == 0 -> true
-                // The box went down before it could report an exit code: that is a success for
-                // shutdown/reboot and only for shutdown/reboot.
-                expectDisconnect && exit == -1 && (droppedEarly || timedOut) -> true
+                // sshd often dies before it can send an exit status for a shutdown, so no status
+                // is the expected result there — unless the output says the command was refused.
+                expectDisconnect && exit == -1 && !looksLikeRefusal(stderr) -> true
                 else -> false
             }
 
@@ -108,6 +110,7 @@ object SshClient {
                     ok -> null
                     exit == -1 && timedOut -> "Command timed out after ${commandTimeoutMs(server) / 1000}s"
                     exit == -1 && droppedEarly -> "Connection dropped before the command reported a result"
+                    exit == -1 -> "The command was refused before it could run"
                     else -> "Command exited with status $exit"
                 },
                 hostKeyFingerprint = hostKeys.presentedFingerprint,
@@ -153,6 +156,19 @@ object SshClient {
         session.userInfo = CredentialAnswers(server)
         session.connect(server.connectTimeoutSec * 1000)
         return session
+    }
+
+    /**
+     * A shutdown that never reports a status is normal; one that was rejected still says so on
+     * stderr first. Without this check a hung `sudo` would be reported as a successful power off.
+     */
+    private fun looksLikeRefusal(stderr: String): Boolean {
+        val text = stderr.lowercase()
+        return listOf(
+            "sudo:", "password", "permission denied", "not permitted", "must be root",
+            "command not found", "no such file", "not in the sudoers", "operation not permitted",
+            "authentication failure", "access denied",
+        ).any { text.contains(it) }
     }
 
     private fun commandTimeoutMs(server: Server): Long =

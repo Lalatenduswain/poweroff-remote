@@ -10,7 +10,6 @@ import com.lalatendu.poweroffremote.domain.ActionRunner
 import com.lalatendu.poweroffremote.domain.PowerController
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.Dispatchers
 
 class AppContainer(context: Context) {
@@ -31,8 +30,6 @@ class AppContainer(context: Context) {
         logs.clear()
         CryptoManager.destroyKey()
     }
-
-    fun shutdown() = scope.cancel()
 }
 
 class PowerOffApp : Application() {

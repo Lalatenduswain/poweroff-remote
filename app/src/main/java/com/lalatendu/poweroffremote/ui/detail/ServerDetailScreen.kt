@@ -150,7 +150,10 @@ fun ServerDetailScreen(
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     Button(
-                        onClick = { confirming = PendingAction.PowerOff },
+                        onClick = {
+                            if (settings.confirmPowerOff) confirming = PendingAction.PowerOff
+                            else onPowerOff()
+                        },
                         enabled = !busy,
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.buttonColors(
@@ -163,7 +166,10 @@ fun ServerDetailScreen(
                         Text("Power off")
                     }
                     OutlinedButton(
-                        onClick = { confirming = PendingAction.Reboot },
+                        onClick = {
+                            if (settings.confirmPowerOff) confirming = PendingAction.Reboot
+                            else onReboot()
+                        },
                         enabled = !busy,
                         modifier = Modifier.weight(1f),
                     ) {
@@ -264,24 +270,18 @@ fun ServerDetailScreen(
 
     confirming?.let { action ->
         val isPowerOff = action == PendingAction.PowerOff
-        val skipConfirm = !settings.confirmPowerOff
-        if (skipConfirm) {
-            confirming = null
-            if (isPowerOff) onPowerOff() else onReboot()
-        } else {
-            ConfirmDialog(
-                title = if (isPowerOff) "Power off ${server.name}?" else "Reboot ${server.name}?",
-                body = "${server.displayTarget} will run " +
-                    "`${if (isPowerOff) server.shutdownCommand else server.rebootCommand}`.",
-                confirmLabel = if (isPowerOff) "Power off" else "Reboot",
-                requiredPhrase = if (settings.typeNameToConfirm && isPowerOff) server.name else null,
-                onConfirm = {
-                    confirming = null
-                    if (isPowerOff) onPowerOff() else onReboot()
-                },
-                onDismiss = { confirming = null },
-            )
-        }
+        ConfirmDialog(
+            title = if (isPowerOff) "Power off ${server.name}?" else "Reboot ${server.name}?",
+            body = "${server.displayTarget} will run " +
+                "`${if (isPowerOff) server.shutdownCommand else server.rebootCommand}`.",
+            confirmLabel = if (isPowerOff) "Power off" else "Reboot",
+            requiredPhrase = if (settings.typeNameToConfirm && isPowerOff) server.name else null,
+            onConfirm = {
+                confirming = null
+                if (isPowerOff) onPowerOff() else onReboot()
+            },
+            onDismiss = { confirming = null },
+        )
     }
 
     if (deleting) {
