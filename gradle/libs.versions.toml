@@ -2,7 +2,7 @@
 # AndroidX past this line (core-ktx 1.18+, activity 1.13+, lifecycle 2.10+, Compose BOM
 # 2026.x) requires AGP 9.1+ and compileSdk 37. Bump agp, compileSdk and these together or
 # the build fails at checkDebugAarMetadata.
-agp = "8.13.1"
+agp = "9.3.2"
 kotlin = "2.2.20"
 
 core-ktx = "1.17.0"
