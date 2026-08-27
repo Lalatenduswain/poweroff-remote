@@ -1,5 +1,9 @@
 # PowerOff Remote
 
+[![CI](https://github.com/Lalatenduswain/poweroff-remote/actions/workflows/ci.yml/badge.svg)](https://github.com/Lalatenduswain/poweroff-remote/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+[![minSdk](https://img.shields.io/badge/minSdk-26-brightgreen.svg)](https://developer.android.com/tools/releases/platforms)
+
 An Android app that stores your server credentials on-device and turns those machines
 off and on again.
 
@@ -132,3 +136,12 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 Kotlin · Jetpack Compose (Material 3) · Navigation Compose · kotlinx.serialization ·
 [mwiede/jsch](https://github.com/mwiede/jsch) for SSH · AndroidX Biometric.
 No backend, no analytics, no network calls other than to your own servers.
+
+## Security
+
+Credentials never leave the device. If you find a way to get at them, please report it privately —
+see [SECURITY.md](SECURITY.md). Do not open a public issue for a vulnerability.
+
+## Licence
+
+[Apache License 2.0](LICENSE).

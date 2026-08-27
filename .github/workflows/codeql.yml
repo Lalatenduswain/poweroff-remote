@@ -1,0 +1,32 @@
+name: CodeQL
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  schedule:
+    # Weekly, so a newly published query still finds old code.
+    - cron: '27 5 * * 1'
+
+jobs:
+  analyze:
+    name: Analyze Kotlin
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read
+      actions: read
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: java-kotlin
+          # Buildless analysis: no Android SDK or Gradle run needed just to scan.
+          build-mode: none
+          queries: security-and-quality
+
+      - uses: github/codeql-action/analyze@v3
+        with:
+          category: /language:java-kotlin
