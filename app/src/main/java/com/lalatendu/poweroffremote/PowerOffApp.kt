@@ -19,7 +19,7 @@ class AppContainer(context: Context) {
     val logs = LogRepository(context)
     val settings = SettingsRepository(context)
     val controller = PowerController(servers, logs)
-    val runner = ActionRunner(controller, scope)
+    val runner = ActionRunner(context, controller, scope)
 
     /**
      * Wipes both vaults and throws away the Keystore key, so anything left on disk is

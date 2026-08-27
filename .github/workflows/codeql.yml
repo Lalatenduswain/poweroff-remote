@@ -12,6 +12,7 @@ jobs:
   analyze:
     name: Analyze Kotlin
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       security-events: write
       contents: read
@@ -20,12 +21,25 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v4
+
       - uses: github/codeql-action/init@v3
         with:
           languages: java-kotlin
-          # Buildless analysis: no Android SDK or Gradle run needed just to scan.
-          build-mode: none
+          # Not build-mode: none — CodeQL cannot extract Kotlin without observing a real
+          # compilation ("could not process any of it using the 'none' build mode").
+          build-mode: manual
           queries: security-and-quality
+
+      # No Gradle caching and no build cache on purpose: a cache hit means nothing is compiled,
+      # so CodeQL would find no source to extract.
+      - name: Build so CodeQL can trace the compiler
+        run: ./gradlew :app:assembleDebug --no-build-cache --no-configuration-cache --no-daemon
 
       - uses: github/codeql-action/analyze@v3
         with:
