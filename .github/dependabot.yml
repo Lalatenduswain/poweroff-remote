@@ -19,6 +19,13 @@ updates:
         update-types: ["version-update:semver-major"]
       - dependency-name: "gradle"
         update-types: ["version-update:semver-major"]
+      # These two are what actually pin the androidx group: Compose 1.12 (BOM 2026.08) and
+      # core-ktx 1.18+ both demand compileSdk 37. Ignoring just them lets the rest of the group
+      # keep updating instead of the whole PR failing on one member.
+      - dependency-name: "androidx.compose:compose-bom"
+        versions: [">=2025.10"]
+      - dependency-name: "androidx.core:core-ktx"
+        versions: [">=1.18"]
 
   - package-ecosystem: github-actions
     directory: "/"
