@@ -97,11 +97,13 @@ class CryptoManagerTest {
     }
 
     @Test
-    fun theBlobIsAnIvFollowedByCiphertextAndTag() {
+    fun theBlobIsAnEnvelopeAroundAWrappedDataKey() {
         val plain = "twelve bytes".toByteArray()
         val blob = crypto.encrypt(plain)
-        // 12 byte IV + ciphertext the same length as the plaintext + 16 byte GCM tag.
-        assertEquals(IV_SIZE + plain.size + TAG_SIZE, blob.size)
+        // version + keystore iv + wrapped 32-byte key and its tag + data iv + ciphertext and tag.
+        val header = 1 + IV_SIZE + (32 + TAG_SIZE) + IV_SIZE
+        assertEquals(header + plain.size + TAG_SIZE, blob.size)
+        assertEquals(ENVELOPE_VERSION, blob[0])
     }
 
     @Test
@@ -128,14 +130,53 @@ class CryptoManagerTest {
     }
 
     @Test
-    fun tamperingWithTheIvIsRejected() {
+    fun tamperingWithTheWrappedKeyIsRejected() {
         val blob = crypto.encrypt("shutdown -h now".toByteArray())
-        blob[0] = (blob[0] + 1).toByte()
+        // Land inside the wrapped data key, just past the version byte and the keystore IV.
+        blob[1 + IV_SIZE + 4] = (blob[1 + IV_SIZE + 4] + 1).toByte()
         try {
             crypto.decrypt(blob)
-            fail("a modified IV must not decrypt")
+            fail("a modified wrapped key must not decrypt")
         } catch (expected: AEADBadTagException) {
         }
+    }
+
+    @Test
+    fun tamperingWithTheDataIvIsRejected() {
+        val blob = crypto.encrypt("shutdown -h now".toByteArray())
+        val dataIvAt = 1 + IV_SIZE + (32 + TAG_SIZE)
+        blob[dataIvAt] = (blob[dataIvAt] + 1).toByte()
+        try {
+            crypto.decrypt(blob)
+            fail("a modified data IV must not decrypt")
+        } catch (expected: AEADBadTagException) {
+        }
+    }
+
+    /**
+     * Vaults written before envelope encryption ran the Keystore key straight over the data. They
+     * still have to open, or upgrading the app would look exactly like losing every credential.
+     */
+    @Test
+    fun stillReadsAVaultWrittenInTheOldDirectFormat() {
+        crypto.encrypt("bring the key into existence".toByteArray())
+        val key = (keyStore().getEntry(alias, null) as KeyStore.SecretKeyEntry).secretKey
+
+        val legacyCipher = javax.crypto.Cipher.getInstance("AES/GCM/NoPadding")
+        legacyCipher.init(javax.crypto.Cipher.ENCRYPT_MODE, key)
+        val legacyBlob = legacyCipher.iv + legacyCipher.doFinal("written by the old format".toByteArray())
+
+        assertEquals("written by the old format", String(crypto.decrypt(legacyBlob)))
+    }
+
+    /**
+     * The regression this whole envelope exists for: Android 8.0's keystore daemon corrupts a
+     * single large operation, and the activity log can easily exceed the safe size.
+     */
+    @Test
+    fun handlesAVaultSizedPayloadOnEveryApiLevel() {
+        val vaultSized = ByteArray(600_000) { (it % 251).toByte() }
+        assertArrayEquals(vaultSized, crypto.decrypt(crypto.encrypt(vaultSized)))
     }
 
     @Test
@@ -215,5 +256,6 @@ class CryptoManagerTest {
         const val TAG = "CryptoManagerTest"
         const val IV_SIZE = 12
         const val TAG_SIZE = 16
+        const val ENVELOPE_VERSION: Byte = 0x02
     }
 }

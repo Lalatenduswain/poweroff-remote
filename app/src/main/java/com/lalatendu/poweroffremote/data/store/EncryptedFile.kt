@@ -15,10 +15,17 @@ class EncryptedFile(
         return try {
             crypto.decryptFromString(file.readText())
         } catch (e: Exception) {
-            // A failure here means the Keystore key is gone (app data cleared, device restored to
-            // new hardware, or the key was invalidated). The blob can never be recovered.
-            Log.w(TAG, "Could not decrypt ${file.name}; discarding it", e)
-            runCatching { file.delete() }
+            // Usually the Keystore key is gone (app data cleared, device restored onto new
+            // hardware, key invalidated) and the blob really is unrecoverable. But it can also be
+            // a bug on our side — Android 8.0 corrupts large Keystore operations, which is exactly
+            // how this was found — so move the file aside rather than deleting it. The app starts
+            // empty either way, and nothing is destroyed that a fix might have recovered.
+            Log.w(TAG, "Could not decrypt ${file.name}; setting it aside", e)
+            runCatching {
+                val quarantine = File(file.parentFile, "${file.name}.unreadable")
+                quarantine.delete()
+                if (!file.renameTo(quarantine)) file.delete()
+            }
             null
         }
     }

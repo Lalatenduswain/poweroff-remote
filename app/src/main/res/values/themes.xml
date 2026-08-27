@@ -1,3 +1,11 @@
 <resources>
     <style name="Theme.PowerOffRemote" parent="android:Theme.Material.NoActionBar" />
+
+    <!-- The widget confirm screen sits over the home screen, so it must not paint a background. -->
+    <style name="Theme.PowerOffRemote.Transparent" parent="android:Theme.Material.Dialog.NoActionBar">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:backgroundDimEnabled">true</item>
+    </style>
 </resources>

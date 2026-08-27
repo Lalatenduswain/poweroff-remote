@@ -10,6 +10,15 @@ updates:
         patterns: ["androidx.*"]
       kotlin:
         patterns: ["org.jetbrains.kotlin*"]
+    ignore:
+      # AGP 9 and Gradle 9 need compileSdk 37 and a migration, not a version bump — see the note
+      # at the top of gradle/libs.versions.toml. Re-open these deliberately when that work starts.
+      - dependency-name: "com.android.application"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "com.android.tools.build:gradle"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "gradle"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: github-actions
     directory: "/"

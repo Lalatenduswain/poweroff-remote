@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">PowerOff Remote</string>
+    <string name="widget_description">Power your servers off, or wake them, from the home screen.</string>
 </resources>
