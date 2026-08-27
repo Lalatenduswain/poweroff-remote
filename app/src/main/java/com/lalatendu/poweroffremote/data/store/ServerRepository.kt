@@ -1,6 +1,7 @@
 package com.lalatendu.poweroffremote.data.store
 
 import android.content.Context
+import com.lalatendu.poweroffremote.data.crypto.CryptoManager
 import com.lalatendu.poweroffremote.data.model.Server
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -9,10 +10,14 @@ import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 import java.io.File
 
-class ServerRepository(context: Context) {
+class ServerRepository(
+    context: Context,
+    fileName: String = "servers.vault",
+    crypto: CryptoManager = CryptoManager.default,
+) {
 
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
-    private val store = EncryptedFile(File(context.filesDir, "servers.vault"))
+    private val store = EncryptedFile(File(context.filesDir, fileName), crypto)
 
     private val _servers = MutableStateFlow(load())
     val servers: StateFlow<List<Server>> = _servers.asStateFlow()

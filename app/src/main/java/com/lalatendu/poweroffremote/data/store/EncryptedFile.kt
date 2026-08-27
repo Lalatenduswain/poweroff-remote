@@ -5,12 +5,15 @@ import com.lalatendu.poweroffremote.data.crypto.CryptoManager
 import java.io.File
 
 /** A single file on internal storage whose whole content is AES-GCM encrypted. */
-class EncryptedFile(private val file: File) {
+class EncryptedFile(
+    private val file: File,
+    private val crypto: CryptoManager = CryptoManager.default,
+) {
 
     fun read(): String? {
         if (!file.exists()) return null
         return try {
-            CryptoManager.decryptFromString(file.readText())
+            crypto.decryptFromString(file.readText())
         } catch (e: Exception) {
             // A failure here means the Keystore key is gone (app data cleared, device restored to
             // new hardware, or the key was invalidated). The blob can never be recovered.
@@ -22,7 +25,7 @@ class EncryptedFile(private val file: File) {
 
     fun write(content: String) {
         val tmp = File(file.parentFile, "${file.name}.tmp")
-        tmp.writeText(CryptoManager.encryptToString(content))
+        tmp.writeText(crypto.encryptToString(content))
         if (!tmp.renameTo(file)) {
             file.writeText(tmp.readText())
             tmp.delete()

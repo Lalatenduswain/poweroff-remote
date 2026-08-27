@@ -28,7 +28,7 @@ class AppContainer(context: Context) {
     fun eraseEverything() {
         servers.eraseAll()
         logs.clear()
-        CryptoManager.destroyKey()
+        CryptoManager.default.destroyKey()
     }
 }
 

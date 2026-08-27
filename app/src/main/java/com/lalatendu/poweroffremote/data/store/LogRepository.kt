@@ -1,6 +1,7 @@
 package com.lalatendu.poweroffremote.data.store
 
 import android.content.Context
+import com.lalatendu.poweroffremote.data.crypto.CryptoManager
 import com.lalatendu.poweroffremote.data.model.ActionType
 import com.lalatendu.poweroffremote.data.model.LogEntry
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -11,10 +12,14 @@ import kotlinx.serialization.json.Json
 import java.io.File
 
 /** Audit trail of every action the app performed. Encrypted, capped, newest first. */
-class LogRepository(context: Context) {
+class LogRepository(
+    context: Context,
+    fileName: String = "activity.vault",
+    crypto: CryptoManager = CryptoManager.default,
+) {
 
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
-    private val store = EncryptedFile(File(context.filesDir, "activity.vault"))
+    private val store = EncryptedFile(File(context.filesDir, fileName), crypto)
 
     private val _entries = MutableStateFlow(load())
     val entries: StateFlow<List<LogEntry>> = _entries.asStateFlow()

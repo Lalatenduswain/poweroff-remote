@@ -94,6 +94,31 @@ Nothing in the suite shuts the target down. The power-off path is covered by run
 that dies by signal, which is what sshd reports when a machine disappears mid-command. Point it
 at `127.0.0.1` and it needs no remote host at all.
 
+### Instrumented tests on a device
+
+`CryptoManagerTest` and `VaultStorageTest` run on real hardware, because the Android Keystore
+cannot be faked on a JVM. Together they cover key generation, GCM round-trips, tamper rejection,
+the on-disk vault, and the "wrong key means start empty rather than crash" path.
+
+```bash
+./gradlew :app:connectedDebugAndroidTest
+```
+
+With the phone wired to another machine, install both APKs there and drive the runner directly:
+
+```bash
+./gradlew :app:assembleDebug :app:assembleDebugAndroidTest
+adb -s <serial> install -r app/build/outputs/apk/debug/app-debug.apk
+adb -s <serial> install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+adb -s <serial> shell am instrument -w \
+  com.lalatendu.poweroffremote.debug.test/androidx.test.runner.AndroidJUnitRunner
+```
+
+Both classes generate a throwaway Keystore alias and their own vault file names per run, and
+delete them afterwards, so running the suite on your own phone cannot touch a live vault. The
+first assertion in each class checks exactly that. `CryptoManagerTest` also logs which security
+level the device gave the key (StrongBox, TEE or software) under the tag `CryptoManagerTest`.
+
 Requires JDK 17+, Android SDK with API 36. `minSdk` is 26 (Android 8.0).
 
 Install on a connected device:
