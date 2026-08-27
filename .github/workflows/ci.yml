@@ -113,13 +113,18 @@ jobs:
           target: default
           arch: x86_64
           disable-animations: true
+          emulator-boot-timeout: 900
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          script: ./gradlew :app:connectedDebugAndroidTest
-
-      - name: Report which security level the emulator gave the key
-        if: always()
-        run: |
-          adb logcat -d -s CryptoManagerTest 2>/dev/null | tail -5 || true
+          # Logcat has to be pulled from inside this script: once the action tears the emulator
+          # down there is no device left, and `adb logcat` then blocks forever waiting for one.
+          script: |
+            set +e
+            ./gradlew :app:connectedDebugAndroidTest
+            status=$?
+            adb logcat -d > logcat-api-${{ matrix.api-level }}.txt 2>&1
+            echo "--- key security level reported by this emulator ---"
+            grep -F "key security level" logcat-api-${{ matrix.api-level }}.txt | tail -3
+            exit $status
 
       - uses: actions/upload-artifact@v7
         if: always()
@@ -128,4 +133,5 @@ jobs:
           path: |
             app/build/reports/androidTests/
             app/build/outputs/androidTest-results/
+            logcat-api-${{ matrix.api-level }}.txt
           retention-days: 7
