@@ -28,7 +28,7 @@ jobs:
 
       - uses: android-actions/setup-android@v4
 
-      - uses: github/codeql-action/init@v3
+      - uses: github/codeql-action/init@v4
         with:
           languages: java-kotlin
           # Not build-mode: none — CodeQL cannot extract Kotlin without observing a real
@@ -41,6 +41,6 @@ jobs:
       - name: Build so CodeQL can trace the compiler
         run: ./gradlew :app:assembleDebug --no-build-cache --no-configuration-cache --no-daemon
 
-      - uses: github/codeql-action/analyze@v3
+      - uses: github/codeql-action/analyze@v4
         with:
           category: /language:java-kotlin
